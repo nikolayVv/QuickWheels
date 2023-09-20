@@ -1,0 +1,80 @@
+kumuluzee:
+  name: orders-service
+  env:
+    name: dev
+  version: 1.0.0
+  server:
+    base-url: http://localhost:8080
+    http:
+      port: 8080
+  datasources:
+    - jndi-name: jdbc/OrdersDS
+      connection-url: jdbc:postgresql://localhost:5432/orders
+      username: dbuser1
+      password: postgres1
+      pool:
+        max-size: 20
+  health:
+    checks:
+      data-source-health-check:
+        jndi-name: jdbc/OrdersDS
+        type: liveness
+  metrics:
+    web-instrumentation:
+      - name: orders-endpoint
+        url-pattern: /v1/order/*
+  logs:
+    config-file: '<?xml version="1.0" encoding="UTF-8"?>
+                          <Configuration name="comments">
+                              <Appenders>
+                                  <Console name="console" target="SYSTEM_OUT">
+                                      <PatternLayout pattern="%d %p %marker %m %X %ex %n"/>
+                                  </Console>
+                                  <Socket name="logstash" host="b52a5eb3-8fd9-4dfb-87e9-bb5c807b64a3-ls.logit.io"
+                                  port="13894" protocol="udp">
+                                      <JSONLayout complete="false" compact="true" eventEol="true" charset="UTF-8" properties="true"/>
+                                  </Socket>
+                              </Appenders>
+                              <Loggers>
+                                  <!-- Default logger -->
+                                  <Root level="all">
+                                      <AppenderRef ref="console" level="info" />
+                                      <AppenderRef ref="logstash" level="trace" />
+                                  </Root>
+                              </Loggers>
+                          </Configuration>'
+  rest-client:
+    registrations:
+      - class: order-processing-api
+        url: http://localhost:8082/v1
+        read-timeout: 5000
+  dev:
+    scan-libraries:
+      - orders-services
+      - orders-models
+      - orders-lib
+  streaming:
+    kafka:
+      producer:
+        bootstrap-servers: ark-01.srvs.cloudkafka.com:9094
+        acks: all
+        retries: 0
+        batch-size: 16384
+        linger-ms: 1
+        buffer-memory: 33554432
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        security-protocol: SASL_SSL
+        sasl-mechanism: SCRAM-SHA-256
+        group-id: newer
+        enable-auto-commit: true
+        auto-commit-interval-ms: 1000
+        auto-offset-reset: earliest
+        session-timeout-ms: 30000
+        sasl-jaas-config:
+rest-properties:
+  maintenance-mode: false
+  broken: false
+app-properties:
+  external-services:
+    enabled: false

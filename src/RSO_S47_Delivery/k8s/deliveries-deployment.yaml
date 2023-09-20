@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deliveries-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deliveries
+  template:
+    metadata:
+      labels:
+        app: deliveries
+    spec:
+      containers:
+        - image: feniksa18/deliveries:2023-01-13-00-30-05
+          name: deliveries
+          env:
+            - name: KUMULUZEE_DATASOURCES0_CONNECTIONURL
+              value: jdbc:postgresql://ella.db.elephantsql.com:5432/fajqyywa
+            - name: KUMULUZEE_DATASOURCES0_USERNAME
+              value: fajqyywa
+            - name: KUMULUZEE_DATASOURCES0_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pass2
+                  key: KUMULUZEE_DATASOURCES0_PASSWORD
+          ports:
+            - containerPort: 8080
+              name: server
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: server
+            initialDelaySeconds: 20
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: server
+            initialDelaySeconds: 20
+            periodSeconds: 3
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: deliveries
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: server
+  selector:
+    app: deliveries

@@ -1,0 +1,49 @@
+clusterName: eks-demo
+
+# the name of the IngressClass
+ingressClass: aws-alb
+
+# works only if you have a working prometheus operator installed:
+# https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack
+serviceMonitor:
+  enabled: true
+
+# make sure to use OIDC for the following, or follow the instructions from here instead:
+# https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/deploy/installation/#option-a-iam-roles-for-service-accounts-irsa
+serviceAccount:
+  create: false
+  name: aws-load-balancer-controller
+
+ingressClassParams:
+  spec:
+    scheme: internet-facing
+    group:
+      name: eks-alb-ingress-demo
+    loadBalancerAttributes:
+      - key: deletion_protection.enabled
+        value: "true" # deletion of all Ingress resources won't delete the ALB
+      - key: idle_timeout.timeout_seconds
+        value: "120"
+      - key: routing.http.drop_invalid_header_fields.enabled
+        value: "true"
+      - key: routing.http2.enabled
+        value: "true"
+      - key: routing.http.preserve_host_header.enabled
+        value: "true"
+    rules:
+      - http:
+          paths:
+            - path: /delivery(/|$)(.*)
+              pathType: Prefix
+              backend:
+                service:
+                  name: deliveries
+                  port:
+                    number: 8080
+            - path: /order(/|$)(.*)
+              pathType: Prefix
+              backend:
+                service:
+                  name: orders
+                  port:
+                    number: 8081
